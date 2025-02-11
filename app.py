@@ -2,7 +2,6 @@ from flask import Flask, redirect, request, render_template_string, session
 import random
 import requests
 import string
-import time
 from bs4 import BeautifulSoup
 
 app = Flask(__name__)
@@ -45,7 +44,8 @@ def fetch_seo_metadata(url):
         if meta_tag:
             meta_desc = meta_tag.get("content", "")
         return title, meta_desc
-    except Exception:
+    except Exception as e:
+        print(f"Error fetching metadata from {url}: {str(e)}")
         return "", ""
 
 def generate_session_id():
@@ -67,9 +67,14 @@ def app_redirect():
 
 @app.route('/app/<session_id>')
 def final_redirect(session_id):
-    seo_source = session.get('seo_source', random.choice(seo_websites))
-    title = session.get('seo_title', '')
-    meta_desc = session.get('seo_desc', '')
+    # If no session data, fetch new SEO content
+    if 'seo_source' not in session:
+        seo_source = random.choice(seo_websites)
+        title, meta_desc = fetch_seo_metadata(seo_source)
+    else:
+        seo_source = session['seo_source']
+        title = session.get('seo_title', '')
+        meta_desc = session.get('seo_desc', '')
     
     response = redirect(destination_url, code=302)
     response.headers['Referer'] = seo_source
